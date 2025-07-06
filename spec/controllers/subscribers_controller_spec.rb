@@ -3,40 +3,87 @@
 require "rails_helper"
 
 RSpec.describe SubscribersController, type: :controller do
-  describe "GET /subscribers" do
-    it "returns 200 and a list of subscribers and pagination object" do
-      get :index, params: {}, format: :json
+  let(:valid_attributes) {
+    { name: 'John Doe', email: 'john@example.com', status: 'active' }
+  }
 
-      expect(response).to have_http_status(:ok)
-      expect(response.content_type).to eq("application/json; charset=utf-8")
+  let(:invalid_attributes) {
+    { name: 'John Doe', email: '', status: 'active' }
+  }
 
-      json = JSON.parse(response.body, symbolize_names: true)
-      expect(json[:subscribers]).not_to be_nil
-      expect(json[:pagination]).not_to be_nil
+  describe "GET #index" do
+    it "returns a success response" do
+      get :index
+      expect(response).to be_successful
+    end
+
+    it "returns subscribers with pagination" do
+      subscriber = Subscriber.create! valid_attributes
+      get :index
+      json_response = JSON.parse(response.body)
+      expect(json_response['subscribers']).to be_an(Array)
+      expect(json_response['pagination']).to be_present
     end
   end
 
-  describe "POST /subscribers" do
-    it "returns 201 if it successfully creates a subscriber" do
-      post :create, params: {email: "test@test.com", name: "John Smith"}, format: :json
+  describe "POST #create" do
+    context "with valid params" do
+      it "creates a new Subscriber" do
+        expect {
+          post :create, params: { subscriber: valid_attributes }
+        }.to change(Subscriber, :count).by(1)
+      end
 
-      expect(response).to have_http_status(:created)
-      expect(response.content_type).to eq("application/json; charset=utf-8")
+      it "renders a JSON response with the new subscriber" do
+        post :create, params: { subscriber: valid_attributes }
+        expect(response).to have_http_status(:created)
+        expect(response.content_type).to match(/application\/json/)
+      end
+    end
 
-      json = JSON.parse(response.body, symbolize_names: true)
-      expect(json[:message]).to eq "Subscriber created successfully"
+    context "with invalid params" do
+      it "renders a JSON response with errors for the new subscriber" do
+        post :create, params: { subscriber: invalid_attributes }
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.content_type).to match(/application\/json/)
+      end
     end
   end
 
-  describe "PATCH /subscribers/:id" do
-    it "returns 200 if it successfully updates a subscriber" do
-      patch :update, params: {id: 1, status: "inactive"}, format: :json
+  describe "PATCH #update" do
+    let(:subscriber) { Subscriber.create! valid_attributes }
 
-      expect(response).to have_http_status(:ok)
-      expect(response.content_type).to eq("application/json; charset=utf-8")
+    context "with valid params" do
+      let(:new_attributes) {
+        { status: 'inactive' }
+      }
 
-      json = JSON.parse(response.body, symbolize_names: true)
-      expect(json[:message]).to eq "Subscriber updated successfully"
+      it "updates the requested subscriber" do
+        patch :update, params: { id: subscriber.to_param, subscriber: new_attributes }
+        subscriber.reload
+        expect(subscriber.status).to eq('inactive')
+      end
+
+      it "renders a JSON response with the subscriber" do
+        patch :update, params: { id: subscriber.to_param, subscriber: new_attributes }
+        expect(response).to be_successful
+        expect(response.content_type).to match(/application\/json/)
+      end
+    end
+
+    context "with invalid params" do
+      it "renders a JSON response with errors for the subscriber" do
+        patch :update, params: { id: subscriber.to_param, subscriber: invalid_attributes }
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.content_type).to match(/application\/json/)
+      end
+    end
+
+    context "with non-existent subscriber" do
+      it "returns not found status" do
+        patch :update, params: { id: 999, subscriber: valid_attributes }
+        expect(response).to have_http_status(:not_found)
+      end
     end
   end
 end

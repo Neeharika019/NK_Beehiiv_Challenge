@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: challenge_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  web:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/challenge_development
+      BASIC_AUTH_USERNAME: admin
+      BASIC_AUTH_PASSWORD: secret123
+      RAILS_ENV: development
+    depends_on:
+      - db
+    volumes:
+     
+      - /app/tmp
+      - /app/log
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails db:create db:migrate db:seed && rails server -b 0.0.0.0"
+
+volumes:
+  postgres_data: 

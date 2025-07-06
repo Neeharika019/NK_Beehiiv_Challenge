@@ -2,6 +2,7 @@ import { useState } from "react";
 import PropTypes from 'prop-types'
 import Button, { SecondaryButton } from '../Button'
 import Modal, { ModalBody, ModalFooter } from '../Modal'
+import Toast from '../Toast'
 
 import { createSubscriber } from "../../services/subscriber";
 
@@ -10,6 +11,10 @@ const AddSubscriberModal = (props) => {
   const [isSaving, setIsSaving] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [showError, setShowError] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const handleChange = (e) => {
     const { target: { name, value }} = e
@@ -20,20 +25,43 @@ const AddSubscriberModal = (props) => {
       setName(value)
     }
   }
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
   const onSubmit = () => {
+    if (!email.trim()) {
+      setErrorMessage('Email is required')
+      setShowError(true)
+      return
+    }
+
+    if (!validateEmail(email)) {
+      setErrorMessage('Please enter a valid email address')
+      setShowError(true)
+      return
+    }
+
     const payload = {
       email,
       name
     }
 
     setIsSaving(true)
+    setShowError(false)
     createSubscriber(payload)
     .then(() => {
-      onSuccess()
+      setSuccessMessage('Subscriber added successfully!')
+      setShowSuccess(true)
+      setTimeout(() => {
+        onSuccess()
+      }, 1500)
     })
     .catch((payload) => {
-      const error = payload?.response?.data?.message || 'Something went wrong'
-      console.error(error)
+      const error = payload?.response?.data?.message || payload?.response?.data?.errors?.join(', ') || 'Something went wrong'
+      setErrorMessage(error)
+      setShowError(true)
     })
     .finally(() => {
       setIsSaving(false)
@@ -41,9 +69,22 @@ const AddSubscriberModal = (props) => {
   }
 
   return (
-    <Modal modalTitle="Add Subscriber" showModal={isOpen} onCloseModal={onClose}>
-      <>
-        <ModalBody>
+    <>
+      <Toast 
+        message={errorMessage}
+        type="error"
+        isVisible={showError}
+        onClose={() => setShowError(false)}
+      />
+      <Toast 
+        message={successMessage}
+        type="success"
+        isVisible={showSuccess}
+        onClose={() => setShowSuccess(false)}
+      />
+      <Modal modalTitle="Add Subscriber" showModal={isOpen} onCloseModal={onClose}>
+        <>
+          <ModalBody>
           <form className="my-4 text-blueGray-500 text-lg leading-relaxed">
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
@@ -90,8 +131,9 @@ const AddSubscriberModal = (props) => {
             Add Subscriber
           </Button>
         </ModalFooter>
-      </>
-    </Modal>
+        </>
+      </Modal>
+    </>
   );
 }
 

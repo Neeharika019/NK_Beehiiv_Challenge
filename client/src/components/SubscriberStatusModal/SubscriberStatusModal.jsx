@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 
 // Components
 import Button, { SecondaryButton } from '../Button';
+import Toast from '../Toast';
 
 // Services
 import { updateSubscriber } from "../../services/subscriber";
@@ -11,6 +12,10 @@ import { updateSubscriber } from "../../services/subscriber";
 const SubscriberStatusModal = (props) => {
   const { isOpen, onSuccess, onClose, subscriberId, status } = props;
   const [isDeleting, setIsDeleting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [showError, setShowError] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const onUpdate = () => {
     const payload = {
@@ -18,13 +23,20 @@ const SubscriberStatusModal = (props) => {
     }
 
     setIsDeleting(true)
+    setShowError(false)
     updateSubscriber(subscriberId, payload)
     .then(() => {
-      onSuccess()
+      const action = status === 'active' ? 'unsubscribed' : 'subscribed'
+      setSuccessMessage(`Subscriber ${action} successfully!`)
+      setShowSuccess(true)
+      setTimeout(() => {
+        onSuccess()
+      }, 1500)
     })
     .catch((payload) => {
-      const error = payload?.response?.data?.message || 'Something went wrong'
-      console.error(error)
+      const error = payload?.response?.data?.message || payload?.response?.data?.errors?.join(', ') || 'Something went wrong'
+      setErrorMessage(error)
+      setShowError(true)
     })
     .finally(() => {
       setIsDeleting(false)
@@ -40,9 +52,22 @@ const SubscriberStatusModal = (props) => {
     "Unsubscribe" : "Resubscribe"
 
   return (
-    <Modal modalTitle={modalTitleText} showModal={isOpen} onCloseModal={onClose}>
-      <>
-        <ModalBody>
+    <>
+      <Toast 
+        message={errorMessage}
+        type="error"
+        isVisible={showError}
+        onClose={() => setShowError(false)}
+      />
+      <Toast 
+        message={successMessage}
+        type="success"
+        isVisible={showSuccess}
+        onClose={() => setShowSuccess(false)}
+      />
+      <Modal modalTitle={modalTitleText} showModal={isOpen} onCloseModal={onClose}>
+        <>
+          <ModalBody>
           {messageBodyText}
         </ModalBody>
         <ModalFooter>
@@ -60,8 +85,9 @@ const SubscriberStatusModal = (props) => {
             {buttonText}
           </Button>
         </ModalFooter>
-      </>
-    </Modal>
+        </>
+      </Modal>
+    </>
   );
 };
 
