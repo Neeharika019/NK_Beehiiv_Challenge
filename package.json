@@ -7,9 +7,7 @@
   },
   "scripts": {
     "postinstall": "cd client && yarn",
-    "heroku-postbuild": "npm run build",
     "build": "npm run --prefix client build",
-    "deploy": "git fetch && git push -f heroku origin/master:refs/heads/master",
     "start": "npm run build && npm run start:server",
     "start:server": "bundle exec foreman start",
     "test": "npm run --prefix client build",
